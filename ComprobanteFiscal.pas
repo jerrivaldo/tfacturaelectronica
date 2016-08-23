@@ -778,7 +778,7 @@ begin
       end;
 
       // Agregamos como complemento el nodo de los impuestos locales
-      IFEXmlComprobanteV32(fXmlComprobante).Complemento.ChildNodes.Add(nodoImpuestosLocales);
+      //IFEXmlComprobanteV32(fXmlComprobante).Complemento.ChildNodes.Add(nodoImpuestosLocales);
     end;
 end;
 
@@ -965,7 +965,6 @@ begin
       // Si estamos en las pruebas de unidad, dejamos que la prueba
       // defina la fecha/hora en que se "genero" el comprobante
       // para que sea el mismo que se uso al haber sido generado con el MicroE
-      if (_USAR_HORA_REAL = True) then
          FechaGeneracion:=ObtenerFechaHoraDeGeneracionActual;
     {$ELSE}
         // Si ya fue generada la factura (por ejemplo cuando se lee)

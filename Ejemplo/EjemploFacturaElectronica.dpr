@@ -17,8 +17,10 @@ program EjemploFacturaElectronica;
 
 {$APPTYPE CONSOLE}
 {.$DEFINE CODESITE}
+{$DEFINE FASTMM}
 
 uses
+  FastMM4,
   SysUtils,
   ActiveX,
   ShlObj,
@@ -158,9 +160,8 @@ begin
       // 5. Creamos la clase Factura con los parametros minimos.
       WriteLn('Generando factura CFDI ...');
       Factura:=TFacturaElectronica.Create(Emisor, Receptor, Certificado, tcIngreso);
-
-      //Factura.AutoAsignarFechaGeneracion := False;
-      //Factura.FechaGeneracion := EncodeDateTime(2012, 05, 12, 19, 47, 22, 0);
+      Factura.AutoAsignarFechaGeneracion := True;
+      //Factura.FechaGeneracion := EncodeDateTime(2016, 05, 12, 19, 47, 22, 0);
       //Factura.OnComprobanteGenerado:=onComprobanteGenerado;
 
       // Asignamos el método de pago, de momento funciona con la cadena "Efectivo"
