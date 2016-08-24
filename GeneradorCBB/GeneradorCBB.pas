@@ -73,7 +73,7 @@ type
 
 implementation
 
-uses QuricolCode, QuricolAPI, pngimage, Jpeg,
+uses pngimage, Jpeg, DelphiZXIngQRCode,
   {$IF Compilerversion >= 20}
    Vcl.Graphics;
   {$ELSE}
@@ -91,7 +91,10 @@ function TGeneradorCBB.GenerarImagen(const aEmisor, aReceptor:
 var
   cadenaParaCBB: String;
   jpgResultado: TJpegImage;
-  bmpCBB: TBitmap;
+  bmpCBB, bmpCBBTamanoEsperado: TBitmap;
+  qrCodeGenerator: TDelphiZXingQRCode;
+  Row, Column: Integer;
+  escala: Double;
 const
   _TAMANO_DE_UUID = 36;
   _IMAGEN_MARGEN = 0;
@@ -99,13 +102,9 @@ const
   _ANCHO_ESTANDARD = 1200;
   _ALTO_ESTANDARD = 1200;
 begin
-  
-
-  Result := False;
   // Checamos que los parámetros esten correctos
   Assert(Length(aUUID) = _TAMANO_DE_UUID,
          'El UUID no tuvo la longitud correcta de ' + IntToStr(_TAMANO_DE_UUID));
-  Assert(aRutaAGuardar <> '', 'La ruta fue vacia');
 
   // 1. Definimos la cadena con la que vamos a generar el CBB segun la especificacion del SAT
   // segun el rubro II.E del Anexo 20
@@ -115,22 +114,65 @@ begin
                            FloatToStrF(aTotal, ffFixed, 17, 6),
                            aUUID]);
 
-  // 2. Generamos la imagen auxiliandonos de la liberia Quaricol
-  jpgResultado := TJPEGImage.Create;
+  // 2. Generamos el CBB
+  bmpCBB := TBitmap.Create;
+  qrCodeGenerator := TDelphiZXingQRCode.Create;
   try
-    bmpCBB := TQRCode.GetBitmapImage(cadenaParaCBB,
-                                    _ANCHO_ESTANDARD, _ANCHO_ESTANDARD, _IMAGEN_MARGEN, _TAMANO_PIXELES, QualityHigh);
+    qrCodeGenerator.Data := cadenaParaCBB;
+    qrCodeGenerator.Encoding := TQRCodeEncoding(qrAuto);
+    qrCodeGenerator.QuietZone := 0;
+    bmpCBB.SetSize(qrCodeGenerator.Rows, qrCodeGenerator.Columns);
+    for Row := 0 to qrCodeGenerator.Rows - 1 do
+    begin
+      for Column := 0 to qrCodeGenerator.Columns - 1 do
+      begin
+        if (qrCodeGenerator.IsBlack[Row, Column]) then
+        begin
+          bmpCBB.Canvas.Pixels[Column, Row] := clBlack;
+        end else
+        begin
+          bmpCBB.Canvas.Pixels[Column, Row] := clWhite;
+        end;
+      end;
+    end;
+
+    // 3. Debido a que el tamaño en el que se genera no es de la resolucion esperada
+    // lo re-generamos
+    bmpCBBTamanoEsperado := TBitmap.Create;
+    jpgResultado := TJPEGImage.Create;
     try
-      // La asignamos el JPG y la guardamos
-      jpgResultado.Assign(bmpCBB);
+      bmpCBBTamanoEsperado.SetSize(_ANCHO_ESTANDARD, _ALTO_ESTANDARD);
+      // Establecemos el fondo blanco
+      bmpCBBTamanoEsperado.Canvas.Brush.Color := clWhite;
+      //bmpCBBTamanoEsperado.Canvas.FillRect(Rect(0, 0, bmpCBBTamanoEsperado.Width, bmpCBBTamanoEsperado.Height));
+
+      // Le cambiamos la escala
+      if (bmpCBBTamanoEsperado.Width < bmpCBBTamanoEsperado.Height) then
+      begin
+        escala := bmpCBBTamanoEsperado.Width / bmpCBB.Width;
+      end else
+      begin
+        escala := bmpCBBTamanoEsperado.Height / bmpCBB.Height;
+      end;
+
+      // Copiamos el CBB del BMp original al nuevo con la escala esperada
+      bmpCBBTamanoEsperado.Canvas.StretchDraw(Rect(0, 0, Trunc(escala * bmpCBB.Width), Trunc(escala * bmpCBB.Height)), bmpCBB);
+
+      // Lo copiamos a una imagen JPEG
+      jpgResultado.Assign(bmpCBBTamanoEsperado);
       jpgResultado.SaveToFile(aRutaAGuardar);
+
       Result := True;
     finally
       bmpCBB.Free;
+      bmpCBBTamanoEsperado.Free;
     end;
   finally
     jpgResultado.Free;
+    qrCodeGenerator.Free;
   end;
+
+  Result := True;
 end;
 
 end.
